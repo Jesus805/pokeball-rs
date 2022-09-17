@@ -38,3 +38,10 @@ pub struct NextChallenge {
     pub encrypted_challenge: [u8; 16],
     pub encrypted_hash: [u8; 16],
 }
+
+#[test]
+pub fn test_challenge_sizes() {
+    assert_eq!(core::mem::size_of::<MainChallengeData>(), 80);
+    assert_eq!(core::mem::size_of::<ChallengeData>(), 378);
+    assert_eq!(core::mem::size_of::<NextChallenge>(), 52);
+}
