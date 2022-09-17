@@ -54,7 +54,7 @@ pub struct NextChallenge {
 }
 
 #[test]
-pub fn test_challenge_sizes() {
+fn test_challenge_sizes() {
     assert_eq!(core::mem::size_of::<MainChallengeData>(), 80);
     assert_eq!(core::mem::size_of::<ChallengeData>(), 378);
     assert_eq!(core::mem::size_of::<NextChallenge>(), 52);
