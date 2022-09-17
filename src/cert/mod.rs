@@ -1,3 +1,17 @@
+pub(crate) mod cert;
+
+use cert::generate_nonce;
+
+#[cfg(feature = "default_aes")]
+use cert::{
+    decrypt_next_default as decrypt_next, generate_chal_0_default as generate_chal_0,
+    generate_next_chal_default as generate_next_chal,
+    generate_reconnect_response_default as generate_reconnect_response,
+};
+
+#[cfg(not(feature = "default_aes"))]
+use cert::{decrypt_next, generate_chal_0, generate_next_chal, generate_reconnect_response};
+
 #[repr(C, packed)]
 pub struct ChallengeData {
     pub state: [u8; 4],
