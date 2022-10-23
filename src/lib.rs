@@ -2,6 +2,7 @@
 
 pub mod aes;
 pub mod cert;
+pub mod rand;
 
 pub static DEVICE_NAME: &str = "Pokemon GO Plus";
 

@@ -1,5 +1,4 @@
-#[cfg(feature = "default_aes")]
-pub(crate) mod default;
+pub mod default;
 
 pub trait AesContext {
     fn pgp_aes_encrypt(&self, inp: &[u8; 16], out: &mut [u8; 16]);

@@ -1,19 +1,11 @@
-pub(crate) mod cert;
+mod cert;
 
-use cert::generate_nonce;
-
-#[cfg(feature = "default_aes")]
-use cert::{
-    decrypt_next_default as decrypt_next, generate_chal_0_default as generate_chal_0,
-    generate_next_chal_default as generate_next_chal,
-    generate_reconnect_response_default as generate_reconnect_response,
+pub use self::cert::{
+    decrypt_next_challenge, generate_chal_0, generate_next_chal, generate_reconnect_response,
 };
 
-#[cfg(not(feature = "default_aes"))]
-use cert::{decrypt_next, generate_chal_0, generate_next_chal, generate_reconnect_response};
-
 #[repr(C, packed)]
-pub struct ChallengeData {
+pub(crate) struct ChallengeData {
     pub state: [u8; 4],
     pub nonce: [u8; 16],
     pub encrypted_main_challenge: [u8; 80],
@@ -33,7 +25,7 @@ pub(crate) struct MainChallengeData {
 }
 
 impl MainChallengeData {
-    pub fn new(rev_bt_addr: [u8; 6], key: &[u8; 16], nonce: &[u8; 16]) -> Self {
+    pub(crate) fn new(rev_bt_addr: [u8; 6], key: &[u8; 16], nonce: &[u8; 16]) -> Self {
         Self {
             bt_addr: rev_bt_addr,
             key: key.clone(),
@@ -46,7 +38,7 @@ impl MainChallengeData {
 }
 
 #[repr(C, packed)]
-pub struct NextChallenge {
+pub(crate) struct NextChallenge {
     pub state: [u8; 4],
     pub nonce: [u8; 16],
     pub encrypted_challenge: [u8; 16],
