@@ -1,5 +1,7 @@
+#[cfg(feature = "default_aes")]
+use crate::aes::default::DefaultAesContext;
 use crate::aes::AesContext;
-use crate::challenge::{ChallengeData, MainChallengeData, NextChallenge};
+use crate::cert::{ChallengeData, MainChallengeData, NextChallenge};
 
 unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
     core::slice::from_raw_parts((p as *const T) as *const u8, core::mem::size_of::<T>())
@@ -88,6 +90,11 @@ fn init_nonce_ctr(nonce: &[u8; 16], nonce_ctr: &mut [u8; 16]) {
     nonce_ctr[15] = 0;
 }
 
+#[cfg(feature = "default_aes")]
+pub fn decrypt_next_default(data: &mut [u8; 80], key: &[u8; 16], output: &mut [u8; 16]) -> bool {
+    decrypt_next::<DefaultAesContext>(&mut DefaultAesContext::new(), data, key, output)
+}
+
 pub fn decrypt_next<T: AesContext>(
     context: &mut T,
     data: &mut [u8; 80],
@@ -105,7 +112,30 @@ pub fn decrypt_next<T: AesContext>(
 
     let mut hash_1: [u8; 16] = [0; 16];
     aes_hash(context, &chal.nonce, output, &mut hash_1);
-    return hash_1 == enc_nonce;
+
+    hash_1 == enc_nonce
+}
+
+#[cfg(feature = "default_aes")]
+pub fn generate_chal_0_default(
+    bt_mac: &[u8; 6],
+    blob: &[u8; 256],
+    the_challenge: &[u8; 16],
+    main_nonce: &[u8; 16],
+    main_key: &[u8; 16],
+    outer_nonce: &[u8; 16],
+    output: &mut ChallengeData,
+) {
+    generate_chal_0::<DefaultAesContext>(
+        &mut DefaultAesContext::new(),
+        bt_mac,
+        blob,
+        &the_challenge,
+        &main_nonce,
+        &main_key,
+        &outer_nonce,
+        output,
+    )
 }
 
 pub fn generate_chal_0<T: AesContext>(
@@ -169,6 +199,16 @@ pub fn generate_chal_0<T: AesContext>(
     }
 }
 
+#[cfg(feature = "default_aes")]
+pub fn generate_next_chal_default(
+    in_data: Option<&[u8; 16]>,
+    key: &[u8; 16],
+    nonce: &[u8; 16],
+    output: &mut NextChallenge,
+) {
+    generate_next_chal(&mut DefaultAesContext::new(), in_data, key, nonce, output)
+}
+
 pub fn generate_next_chal<T: AesContext>(
     context: &mut T,
     in_data: Option<&[u8; 16]>,
@@ -205,6 +245,15 @@ pub fn generate_nonce<T: Random>(randomizer: &T, nonce: &mut [u8; 16]) {
     for element in nonce {
         *element = (randomizer.gen_random() & 0xff) as u8;
     }
+}
+
+#[cfg(feature = "default_aes")]
+pub fn generate_reconnect_response_default(
+    key: &[u8; 16],
+    challenge: &[u8; 16],
+    output: &mut [u8; 16],
+) {
+    generate_reconnect_response(&mut DefaultAesContext::new(), key, challenge, output)
 }
 
 pub fn generate_reconnect_response<T: AesContext>(
