@@ -2,7 +2,12 @@
 
 pub mod aes;
 pub mod cert;
-mod constants;
+pub(crate) mod constants;
 pub mod rand;
 
-pub use constants::*;
+#[cfg(feature = "uuid")]
+mod uuid;
+
+pub use crate::constants::*;
+#[cfg(feature = "uuid")]
+pub use crate::uuid::*;
