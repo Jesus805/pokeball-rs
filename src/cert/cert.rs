@@ -25,6 +25,7 @@ pub fn decrypt_next_challenge<T: AesContext>(
 pub fn generate_chal_0<T: AesContext>(
     context: &mut T,
     bt_mac: &[u8; 6],
+    device_key: &[u8; 16],
     blob: &[u8; 256],
     the_challenge: &[u8; 16],
     main_nonce: &[u8; 16],
@@ -45,9 +46,9 @@ pub fn generate_chal_0<T: AesContext>(
     chal.nonce.copy_from_slice(outer_nonce);
     chal.state.copy_from_slice(&[0; 4]);
 
-    let mut main_data = MainChallengeData::new(reversed_mac, &main_key, &main_nonce);
+    let mut main_data = MainChallengeData::new(reversed_mac, main_key, main_nonce);
 
-    context.aes_set_key(&main_key);
+    context.aes_set_key(main_key);
     aes_ctr(
         context,
         &mut main_data.nonce,
@@ -62,8 +63,9 @@ pub fn generate_chal_0<T: AesContext>(
         &mut main_data.encrypted_hash,
     );
 
+    context.aes_set_key(device_key);
     unsafe {
-        aes_ctr(
+        aes_hash(
             context,
             &mut chal.nonce,
             any_as_u8_slice(&main_data),
