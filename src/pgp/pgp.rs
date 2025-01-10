@@ -1,19 +1,22 @@
-use crate::pgp::LedPattern;
+use crate::pgp::LedResult;
 
-fn decode_number_of_led_patterns(buffer: &[u8]) -> u8 {
-    buffer[3] & 0x1f
-}
-
-fn decode_led_priority(buffer: &[u8]) -> u8 {
+pub fn decode_led_priority(buffer: &[u8]) -> u8 {
     (buffer[3] >> 5) & 0x07
 }
 
-fn decode_led_notify(buffer: &[u8], number_of_patterns: u8, patterns: &mut [LedPattern]) {
-    for i in 0..number_of_patterns as usize {
+pub fn decode_led_pattern(buffer: &[u8], led_pattern_count: u8) -> LedResult {
+    // TODO
+    /*
+    let led_pattern_count = buffer[3] & 0x1f;
+
+    let pattern: [LedPattern; led_pattern_count];
+    for i in 0..led_pattern_count as usize {
         let p = 4 + 3 * i;
-        patterns[i].duration = buffer[p];
-        patterns[i].red = buffer[p + 1] & 0x0f;
-        patterns[i].green = (buffer[p + 1] >> 4) & 0x0f;
-        patterns[i].blue = buffer[p + 2] & 0x0f;
+        pattern[i].duration = buffer[p];
+        pattern[i].red = buffer[p + 1] & 0x0f;
+        pattern[i].green = (buffer[p + 1] >> 4) & 0x0f;
+        pattern[i].blue = buffer[p + 2] & 0x0f;
     }
+    */
+    LedResult::Unknown
 }

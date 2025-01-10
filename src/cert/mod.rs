@@ -45,9 +45,18 @@ pub(crate) struct NextChallenge {
     pub encrypted_hash: [u8; 16],
 }
 
+pub enum CertificationStep {
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+}
+
 #[test]
 fn test_challenge_sizes() {
-    assert_eq!(core::mem::size_of::<MainChallengeData>(), 80);
-    assert_eq!(core::mem::size_of::<ChallengeData>(), 378);
-    assert_eq!(core::mem::size_of::<NextChallenge>(), 52);
+    assert_eq!(size_of::<MainChallengeData>(), 80);
+    assert_eq!(size_of::<ChallengeData>(), 378);
+    assert_eq!(size_of::<NextChallenge>(), 52);
 }

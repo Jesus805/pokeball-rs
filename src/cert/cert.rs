@@ -116,6 +116,8 @@ pub fn generate_next_chal<T: AesContext>(
         &mut chal.nonce,
         &mut chal.encrypted_challenge,
     );
+
+    output[0] = 0x01;
 }
 
 pub fn generate_reconnect_response<T: AesContext>(

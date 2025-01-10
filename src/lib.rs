@@ -3,11 +3,11 @@
 pub mod aes;
 pub mod cert;
 pub(crate) mod constants;
+pub mod pgp;
 pub mod rand;
 
 #[cfg(feature = "uuid")]
 mod uuid;
-mod pgp;
 
 pub use crate::constants::*;
 #[cfg(feature = "uuid")]
