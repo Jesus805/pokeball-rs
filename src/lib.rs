@@ -7,6 +7,7 @@ pub mod rand;
 
 #[cfg(feature = "uuid")]
 mod uuid;
+mod pgp;
 
 pub use crate::constants::*;
 #[cfg(feature = "uuid")]
