@@ -13,6 +13,12 @@ impl DefaultAesContext {
     }
 }
 
+impl Default for DefaultAesContext {
+    fn default() -> Self {
+        DefaultAesContext::new()
+    }
+}
+
 impl AesContext for DefaultAesContext {
     fn pgp_aes_encrypt(&self, inp: &[u8; 16], out: &mut [u8; 16]) {
         out.copy_from_slice(inp);
@@ -76,6 +82,7 @@ fn aes_ecb_encrypt(round_key: &[u8; 176], inout: &mut [u8; 16]) {
 }
 
 // This function produces ColumnCount(RoundCount+1) round keys. The round keys are used in each round to decrypt the states.
+#[allow(clippy::identity_op)]
 fn key_expansion(round_key: &mut [u8; 176], key: &[u8; 16]) {
     let mut j;
     let mut k;
@@ -124,7 +131,7 @@ fn key_expansion(round_key: &mut [u8; 176], key: &[u8; 16]) {
                 temp[3] = SBOX[temp[3] as usize];
             }
 
-            temp[0] = temp[0] ^ RCON[i / WORD_COUNT];
+            temp[0] ^= RCON[i / WORD_COUNT];
         }
 
         j = i * 4;
@@ -145,16 +152,17 @@ fn add_round_key(round: usize, state: &mut [u8; 16], round_key: &[u8; 176]) {
 }
 
 // MixColumns function mixes the columns of the state matrix
+
 fn mix_columns(state: &mut [u8; 16]) {
     let mut time;
     let mut temp;
     for i in 0..4 {
         let j = 4 * i;
-        let t = state[j + 0];
-        temp = state[j + 0] ^ state[j + 1] ^ state[j + 2] ^ state[j + 3];
-        time = state[j + 0] ^ state[j + 1];
+        let t = state[j];
+        temp = state[j] ^ state[j + 1] ^ state[j + 2] ^ state[j + 3];
+        time = state[j] ^ state[j + 1];
         time = xtime(time);
-        state[j + 0] ^= time ^ temp;
+        state[j] ^= time ^ temp;
         time = state[j + 1] ^ state[j + 2];
         time = xtime(time);
         state[j + 1] ^= time ^ temp;
@@ -170,6 +178,8 @@ fn mix_columns(state: &mut [u8; 16]) {
 // The ShiftRows() function shifts the rows in the state to the left.
 // Each row is shifted with different offset.
 // Offset = Row number. So the first row is not shifted.
+#[allow(clippy::erasing_op)]
+#[allow(clippy::identity_op)]
 fn shift_rows(state: &mut [u8; 16]) {
     // Rotate first row 1 columns to left
     let temp = state[(4 * 0) + 1];
@@ -179,13 +189,8 @@ fn shift_rows(state: &mut [u8; 16]) {
     state[(4 * 3) + 1] = temp;
 
     // Rotate second row 2 columns to left
-    let temp = state[(4 * 0) + 2];
-    state[(4 * 0) + 2] = state[(4 * 2) + 2];
-    state[(4 * 2) + 2] = temp;
-
-    let temp = state[(4 * 1) + 2];
-    state[(4 * 1) + 2] = state[(4 * 3) + 2];
-    state[(4 * 3) + 2] = temp;
+    state.swap((4 * 0) + 2, (4 * 2) + 2);
+    state.swap((4 * 1) + 2, (4 * 3) + 2);
 
     // Rotate third row 3 columns to left
     let temp = state[(4 * 0) + 3];

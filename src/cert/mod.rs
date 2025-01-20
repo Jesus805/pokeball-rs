@@ -28,8 +28,8 @@ impl MainChallengeData {
     pub(crate) fn new(rev_bt_addr: [u8; 6], key: &[u8; 16], nonce: &[u8; 16]) -> Self {
         Self {
             bt_addr: rev_bt_addr,
-            key: key.clone(),
-            nonce: nonce.clone(),
+            key: *key,
+            nonce: *nonce,
             encrypted_challenge: [0; 16],
             encrypted_hash: [0; 16],
             flash_data: [0; 10],
