@@ -1,5 +1,54 @@
 use crate::aes::AesContext;
-use crate::cert::{ChallengeData, MainChallengeData, NextChallenge};
+
+#[repr(C, packed)]
+pub(crate) struct ChallengeData {
+    pub state: [u8; 4],
+    pub nonce: [u8; 16],
+    pub encrypted_main_challenge: [u8; 80],
+    pub encrypted_hash: [u8; 16],
+    pub bt_addr: [u8; 6],
+    pub blob: [u8; 256],
+}
+
+#[repr(C, packed)]
+pub(crate) struct MainChallengeData {
+    pub bt_addr: [u8; 6],
+    pub key: [u8; 16],
+    pub nonce: [u8; 16],
+    pub encrypted_challenge: [u8; 16],
+    pub encrypted_hash: [u8; 16],
+    pub flash_data: [u8; 10],
+}
+
+impl MainChallengeData {
+    pub(crate) fn new(rev_bt_addr: [u8; 6], key: &[u8; 16], nonce: &[u8; 16]) -> Self {
+        Self {
+            bt_addr: rev_bt_addr,
+            key: *key,
+            nonce: *nonce,
+            encrypted_challenge: [0; 16],
+            encrypted_hash: [0; 16],
+            flash_data: [0; 10],
+        }
+    }
+}
+
+#[repr(C, packed)]
+pub(crate) struct NextChallenge {
+    pub state: [u8; 4],
+    pub nonce: [u8; 16],
+    pub encrypted_challenge: [u8; 16],
+    pub encrypted_hash: [u8; 16],
+}
+
+pub enum CertificationStep {
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+}
 
 pub fn decrypt_next_challenge<T: AesContext>(
     context: &mut T,
@@ -22,6 +71,7 @@ pub fn decrypt_next_challenge<T: AesContext>(
     hash_1 == enc_nonce
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn generate_chal_0<T: AesContext>(
     context: &mut T,
     bt_mac: &[u8; 6],
@@ -214,4 +264,11 @@ fn init_nonce_hash(nonce: &[u8; 16], datalen: usize, nonce_hash: &mut [u8; 16]) 
     nonce_hash[0] = 57;
     nonce_hash[14] = ((datalen >> 8) & 0xff) as u8;
     nonce_hash[15] = (datalen & 0xff) as u8;
+}
+
+#[test]
+fn test_challenge_sizes() {
+    assert_eq!(size_of::<MainChallengeData>(), 80);
+    assert_eq!(size_of::<ChallengeData>(), 378);
+    assert_eq!(size_of::<NextChallenge>(), 52);
 }
