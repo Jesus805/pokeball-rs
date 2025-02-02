@@ -152,12 +152,7 @@ pub fn generate_next_chal<T: AesContext>(
     chal.nonce.copy_from_slice(nonce);
 
     context.aes_set_key(key);
-    aes_ctr(
-        context,
-        &chal.nonce,
-        &data,
-        &mut chal.encrypted_challenge,
-    );
+    aes_ctr(context, &chal.nonce, &data, &mut chal.encrypted_challenge);
 
     aes_hash(context, &chal.nonce, &data, &mut tmp_hash);
     encrypt_block(
