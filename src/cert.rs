@@ -1,5 +1,54 @@
 use crate::aes::AesContext;
-use crate::cert::{ChallengeData, MainChallengeData, NextChallenge};
+
+#[repr(C, packed)]
+pub(crate) struct ChallengeData {
+    pub state: [u8; 4],
+    pub nonce: [u8; 16],
+    pub encrypted_main_challenge: [u8; 80],
+    pub encrypted_hash: [u8; 16],
+    pub bt_addr: [u8; 6],
+    pub blob: [u8; 256],
+}
+
+#[repr(C, packed)]
+pub(crate) struct MainChallengeData {
+    pub bt_addr: [u8; 6],
+    pub key: [u8; 16],
+    pub nonce: [u8; 16],
+    pub encrypted_challenge: [u8; 16],
+    pub encrypted_hash: [u8; 16],
+    pub flash_data: [u8; 10],
+}
+
+impl MainChallengeData {
+    pub(crate) fn new(rev_bt_addr: [u8; 6], key: &[u8; 16], nonce: &[u8; 16]) -> Self {
+        Self {
+            bt_addr: rev_bt_addr,
+            key: *key,
+            nonce: *nonce,
+            encrypted_challenge: [0; 16],
+            encrypted_hash: [0; 16],
+            flash_data: [0; 10],
+        }
+    }
+}
+
+#[repr(C, packed)]
+pub(crate) struct NextChallenge {
+    pub state: [u8; 4],
+    pub nonce: [u8; 16],
+    pub encrypted_challenge: [u8; 16],
+    pub encrypted_hash: [u8; 16],
+}
+
+pub enum CertificationStep {
+    One,
+    Two,
+    Three,
+    Four,
+    Five,
+    Six,
+}
 
 pub fn decrypt_next_challenge<T: AesContext>(
     context: &mut T,
@@ -11,7 +60,7 @@ pub fn decrypt_next_challenge<T: AesContext>(
     let chal = &mut body[0];
 
     context.aes_set_key(key);
-    aes_ctr(context, &mut chal.nonce, &chal.encrypted_challenge, output);
+    aes_ctr(context, &chal.nonce, &chal.encrypted_challenge, output);
 
     let mut enc_nonce: [u8; 16] = [0; 16];
     encrypt_block(context, &chal.encrypted_hash, &chal.nonce, &mut enc_nonce);
@@ -22,6 +71,7 @@ pub fn decrypt_next_challenge<T: AesContext>(
     hash_1 == enc_nonce
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn generate_chal_0<T: AesContext>(
     context: &mut T,
     bt_mac: &[u8; 6],
@@ -37,7 +87,7 @@ pub fn generate_chal_0<T: AesContext>(
     let chal = &mut body[0];
 
     let mut tmp_hash: [u8; 16] = [0; 16];
-    let mut reversed_mac: [u8; 6] = bt_mac.clone();
+    let mut reversed_mac: [u8; 6] = *bt_mac;
     reversed_mac.reverse();
 
     //outer layer
@@ -51,14 +101,14 @@ pub fn generate_chal_0<T: AesContext>(
     context.aes_set_key(main_key);
     aes_ctr(
         context,
-        &mut main_data.nonce,
+        &main_data.nonce,
         the_challenge,
         &mut main_data.encrypted_challenge,
     );
-    aes_hash(context, &mut main_data.nonce, the_challenge, &mut tmp_hash);
+    aes_hash(context, &main_data.nonce, the_challenge, &mut tmp_hash);
     encrypt_block(
         context,
-        &mut tmp_hash,
+        &tmp_hash,
         &main_data.nonce,
         &mut main_data.encrypted_hash,
     );
@@ -67,7 +117,7 @@ pub fn generate_chal_0<T: AesContext>(
     unsafe {
         aes_hash(
             context,
-            &mut chal.nonce,
+            &chal.nonce,
             any_as_u8_slice(&main_data),
             &mut tmp_hash,
         );
@@ -76,7 +126,7 @@ pub fn generate_chal_0<T: AesContext>(
     unsafe {
         aes_ctr(
             context,
-            &mut chal.nonce,
+            &chal.nonce,
             any_as_u8_slice(&main_data),
             &mut chal.encrypted_main_challenge,
         );
@@ -96,26 +146,23 @@ pub fn generate_next_chal<T: AesContext>(
     let mut tmp_hash: [u8; 16] = [0; 16];
 
     let data = match in_data {
-        Some(d) => d.clone(),
+        Some(d) => *d,
         None => [0; 16],
     };
     chal.nonce.copy_from_slice(nonce);
 
     context.aes_set_key(key);
-    aes_ctr(
+    aes_ctr(context, &chal.nonce, &data, &mut chal.encrypted_challenge);
+
+    aes_hash(context, &chal.nonce, &data, &mut tmp_hash);
+    encrypt_block(
         context,
-        &mut chal.nonce,
-        &data,
+        &tmp_hash,
+        &chal.nonce,
         &mut chal.encrypted_challenge,
     );
 
-    aes_hash(context, &mut chal.nonce, &data, &mut tmp_hash);
-    encrypt_block(
-        context,
-        &mut tmp_hash,
-        &mut chal.nonce,
-        &mut chal.encrypted_challenge,
-    );
+    output[0] = 0x01;
 }
 
 pub fn generate_reconnect_response<T: AesContext>(
@@ -124,9 +171,9 @@ pub fn generate_reconnect_response<T: AesContext>(
     challenge: &[u8; 16],
     output: &mut [u8; 16],
 ) {
-    context.aes_set_key(&key);
-    context.pgp_aes_encrypt(&challenge, output);
-    for i in 0..16 as usize {
+    context.aes_set_key(key);
+    context.pgp_aes_encrypt(challenge, output);
+    for i in 0..16_usize {
         output[i] ^= challenge[i + 16];
     }
 }
@@ -170,7 +217,7 @@ fn aes_hash<T: AesContext>(context: &T, nonce: &[u8; 16], data: &[u8], output: &
 }
 
 unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    core::slice::from_raw_parts((p as *const T) as *const u8, core::mem::size_of::<T>())
+    core::slice::from_raw_parts((p as *const T) as *const u8, size_of::<T>())
 }
 
 fn encrypt_block<T: AesContext>(
@@ -186,7 +233,7 @@ fn encrypt_block<T: AesContext>(
 
     context.pgp_aes_encrypt(&nonce_ctr, &mut tmp);
 
-    for i in 0..(16 as usize) {
+    for i in 0..16_usize {
         output[i] = tmp[i] ^ nonce_iv[i];
     }
 }
@@ -212,4 +259,11 @@ fn init_nonce_hash(nonce: &[u8; 16], datalen: usize, nonce_hash: &mut [u8; 16]) 
     nonce_hash[0] = 57;
     nonce_hash[14] = ((datalen >> 8) & 0xff) as u8;
     nonce_hash[15] = (datalen & 0xff) as u8;
+}
+
+#[test]
+fn test_challenge_sizes() {
+    assert_eq!(size_of::<MainChallengeData>(), 80);
+    assert_eq!(size_of::<ChallengeData>(), 378);
+    assert_eq!(size_of::<NextChallenge>(), 52);
 }

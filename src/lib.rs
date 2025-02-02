@@ -3,6 +3,7 @@
 pub mod aes;
 pub mod cert;
 pub(crate) mod constants;
+pub mod pgp;
 pub mod rand;
 
 #[cfg(feature = "uuid")]
